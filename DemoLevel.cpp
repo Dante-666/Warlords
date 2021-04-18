@@ -47,9 +47,10 @@ bool DemoLevel::init() {
     this->setNavMeshDebugCamera(_camera);
 
     NavMeshAgentParam param;
-    param.radius = 1;
+    param.radius = 0.5;
     param.height = 8;
-    param.maxSpeed = 8;
+    param.maxSpeed = 5;
+    param.maxAcceleration = 100;
     _agent = NavMeshAgent::create(param);
     //_agent->setOrientationRefAxes(Vec3{1., 0, -1.});
     /*auto sprite = Sprite3D::create("models/rDice.obj");
@@ -62,6 +63,13 @@ bool DemoLevel::init() {
     auto node = Node::create();
     node->addComponent(_agent);
     this->addChild(node);
+
+    auto sprite = Sprite3D::create("models/rDice.obj");
+    sprite->setPosition3D(Vec3{50, 0, -50});
+    sprite->setTexture("models/box_albedo.png");
+    sprite->setCameraMask((unsigned int)CameraFlag::USER1);
+    sprite->setScale(5);
+    this->addChild(sprite);
 
     /*auto box = Sprite3D::create("models/rDice.obj");
     if (box) {
@@ -130,6 +138,20 @@ void DemoLevel::insertKeyboardCallbacks() {
 	    Director::getInstance()->end();
 	}
         _camera->setRotation3D(rot);
+        /*if (kc == EventKeyboard::KeyCode::KEY_I) {
+	    _agent->move(Vec3{-50, 0, 0});
+        } else if (kc == EventKeyboard::KeyCode::KEY_K) {
+	    _agent->move(Vec3{50, 0, 0});
+        } else if (kc == EventKeyboard::KeyCode::KEY_J) {
+	    _agent->move(Vec3{0, 0, -50});
+        } else if (kc == EventKeyboard::KeyCode::KEY_L) {
+	    _agent->move(Vec3{0, 0, 50});
+        } // Forward-backward motion
+        else if (kc == EventKeyboard::KeyCode::KEY_W) {
+        } else if (kc == EventKeyboard::KeyCode::KEY_S) {
+        } else if (kc == EventKeyboard::KeyCode::KEY_ESCAPE) {
+	    Director::getInstance()->end();
+	}*/
     };
 
     /*keyListener->onKeyReleased = [](EventKeyboard::KeyCode kc, Event* evt) {
@@ -149,17 +171,20 @@ void DemoLevel::insertMouseCallbacks() {
     auto mouseListener = EventListenerMouse::create();
 
     mouseListener->onMouseDown = [=](EventMouse *event) {
+        //auto loc = event->getLocationInView();
         auto loc = event->getLocationInView();
-        auto near = Vec3{loc.x, loc.y, 0.0};
-        auto far = Vec3{loc.x, loc.y, 1.0};
-        near = _camera->unproject(near);
-        far = _camera->unproject(far);
+	auto size = Director::getInstance()->getWinSize();
+	// mouse events generate bottom left origin and unproject
+	// expects top left, do this to compensate
+	loc.y = size.height - loc.y;
 
+        auto far = Vec3{loc.x, loc.y, 1.0};
+        _camera->unproject(size, &far, &far);
+	
         Physics3DWorld::HitResult result;
-        this->getPhysics3DWorld()->rayCast(near, far, &result);
+        this->getPhysics3DWorld()->rayCast(_camera->getPosition3D(), far, &result);
 
         auto hitPos = result.hitPosition;
-	printLoc(hitPos);
 
 	_agent->move(hitPos);
     };
