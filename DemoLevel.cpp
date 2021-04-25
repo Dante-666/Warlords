@@ -24,16 +24,20 @@ bool DemoLevel::init() {
     // Insert level
     //
     // auto level = Sprite3D::create("nav_test.obj");
-    auto triangles = Bundle3D::getTrianglesList("plane.obj");
+    auto levelLoc = "models/plane.obj";
+    auto levelTex = "models/box_albedo.png";
+    auto triangles = Bundle3D::getTrianglesList(levelLoc);
     Physics3DRigidBodyDes rbDes;
     rbDes.mass = 0;
     rbDes.shape =
         Physics3DShape::createMesh(triangles.data(), triangles.size() / 3);
     auto rigidBody = Physics3DRigidBody::create(&rbDes);
     auto component = Physics3DComponent::create(rigidBody);
-    auto level = Sprite3D::create("plane.obj");
+    auto level = Sprite3D::create(levelLoc);
+
+    // For raycasting to support click and touch events
     level->addComponent(component);
-    level->setTexture("models/box_albedo.png");
+    level->setTexture(levelTex);
     level->setCameraMask((unsigned short)CameraFlag::USER1);
     // level->setVisible(false);
 
@@ -41,7 +45,10 @@ bool DemoLevel::init() {
 
     insertCamera();
 
-    auto navMesh = NavMesh::create("plane.bin", "plane.gset");
+    auto navmeshLoc = "navmesh/plane.bin";
+    auto navmeshGeom = "navmesh/plane.gset";
+
+    auto navMesh = NavMesh::create(navmeshLoc, navmeshGeom);
     navMesh->setDebugDrawEnable(true);
     this->setNavMesh(navMesh);
     this->setNavMeshDebugCamera(_camera);
@@ -64,12 +71,33 @@ bool DemoLevel::init() {
     node->addComponent(_agent);
     this->addChild(node);
 
-    auto sprite = Sprite3D::create("models/rDice.obj");
+    auto testSprite = "models/rDice.obj";
+
+    auto sprite = Sprite3D::create(testSprite);
     sprite->setPosition3D(Vec3{50, 0, -50});
-    sprite->setTexture("models/box_albedo.png");
+    sprite->setTexture(levelTex);
     sprite->setCameraMask((unsigned int)CameraFlag::USER1);
     sprite->setScale(5);
     this->addChild(sprite);
+
+    auto animatedSpriteLoc = "models/Wizard.c3t";
+    auto animatedSprite = Sprite3D::create(animatedSpriteLoc);
+    animatedSprite->setPosition3D(Vec3{-40, 0, -50});
+    auto rot = animatedSprite->getRotation3D();
+    //animatedSprite->setRotation3D(rot + Vec3{M_PI/2, 0, 0});
+    animatedSprite->setRotation3D(Vec3{0, M_PI/2, 0});
+    animatedSprite->setTexture(levelTex);
+    animatedSprite->setCameraMask((unsigned int)CameraFlag::USER1);
+    animatedSprite->setScale(1./5);
+    this->addChild(animatedSprite); 
+
+    auto animation3D = Animation3D::create(animatedSpriteLoc, "CharacterArmature|Run");
+    auto animate3D = Animate3D::create(animation3D);
+
+    if(animate3D) {
+	animatedSprite->runAction(RepeatForever::create(animate3D));
+	//animate3D->setSpeed(0);
+    }
 
     /*auto box = Sprite3D::create("models/rDice.obj");
     if (box) {
