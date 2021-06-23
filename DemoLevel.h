@@ -5,6 +5,7 @@
 #include "cocos2d.h"
 #include "navmesh/CCNavMesh.h"
 #include "3d/CCBundle3D.h"
+#include "AnimatedSprite3D.h"
 
 NS_CC_BEGIN
 
@@ -13,7 +14,7 @@ class DemoLevel : public Scene {
     // TODO:add world mesh here
     //
     Camera* _camera;
-    NavMeshAgent* _agent;
+    AnimatedSprite3D* _wizard;
   public:
     static Scene *createScene();
 
