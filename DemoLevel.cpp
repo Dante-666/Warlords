@@ -5,6 +5,7 @@
 #include "physics3d/CCPhysics3DWorld.h"
 
 #include <iostream>
+#include <unordered_map>
 
 NS_CC_BEGIN
 
@@ -40,6 +41,7 @@ bool DemoLevel::init() {
     level->setTexture(levelTex);
     level->setCameraMask((unsigned short)CameraFlag::USER1);
     // level->setVisible(false);
+    // TODO: Move this to a NavMeshScene
 
     this->addChild(level);
 
@@ -53,24 +55,6 @@ bool DemoLevel::init() {
     this->setNavMesh(navMesh);
     this->setNavMeshDebugCamera(_camera);
 
-    NavMeshAgentParam param;
-    param.radius = 0.5;
-    param.height = 8;
-    param.maxSpeed = 5;
-    param.maxAcceleration = 100;
-    _agent = NavMeshAgent::create(param);
-    //_agent->setOrientationRefAxes(Vec3{1., 0, -1.});
-    /*auto sprite = Sprite3D::create("models/rDice.obj");
-    //sprite->setPosition3D(Vec3{0, 5, 0});
-    sprite->setTexture("models/box_albedo.png");
-    sprite->addComponent(_agent);
-    sprite->setCameraMask((unsigned int)CameraFlag::USER1);
-    sprite->setScale(5);
-    this->addChild(sprite);*/
-    auto node = Node::create();
-    node->addComponent(_agent);
-    this->addChild(node);
-
     auto testSprite = "models/rDice.obj";
 
     auto sprite = Sprite3D::create(testSprite);
@@ -81,30 +65,21 @@ bool DemoLevel::init() {
     this->addChild(sprite);
 
     auto animatedSpriteLoc = "models/Wizard.c3t";
-    auto animatedSprite = Sprite3D::create(animatedSpriteLoc);
-    animatedSprite->setPosition3D(Vec3{-40, 0, -50});
-    auto rot = animatedSprite->getRotation3D();
-    //animatedSprite->setRotation3D(rot + Vec3{M_PI/2, 0, 0});
-    animatedSprite->setRotation3D(Vec3{0, M_PI/2, 0});
-    animatedSprite->setTexture(levelTex);
-    animatedSprite->setCameraMask((unsigned int)CameraFlag::USER1);
-    animatedSprite->setScale(1./5);
-    this->addChild(animatedSprite); 
 
-    auto animation3D = Animation3D::create(animatedSpriteLoc, "CharacterArmature|Run");
-    auto animate3D = Animate3D::create(animation3D);
-
-    if(animate3D) {
-	animatedSprite->runAction(RepeatForever::create(animate3D));
-	//animate3D->setSpeed(0);
-    }
-
-    /*auto box = Sprite3D::create("models/rDice.obj");
-    if (box) {
-        box->setCameraMask((unsigned short)CameraFlag::USER1);
-        this->addChild(box);
-    } else {
-        problemLoading("box cannot be loaded");
+    _wizard = AnimatedSprite3D::create(animatedSpriteLoc);
+    this->addChild(_wizard);
+    //_wizard->switchState("startIdle");
+    //_wizard->switchState("startWalk");
+    _wizard->switchState(AnimationTrigger::IDLE2WALK);
+    _wizard->switchState(AnimationTrigger::DEFAULT2IDLE);
+    _wizard->switchState(AnimationTrigger::DEFAULT2IDLE);
+    _wizard->switchState(AnimationTrigger::IDLE2WALK);
+    //_wizard->switchState(AnimationTrigger::IDLE2WALK);
+    //_wizard->switchState(AnimationTrigger::WALK2RUN);
+    //_wizard->switchState(AnimationTrigger::WALK2RUN);
+    /*if (animate3D) {
+        animatedSprite->runAction(RepeatForever::create(animate3D));
+        // animate3D->setSpeed(0);
     }*/
 
     insertSkyBox();
@@ -163,23 +138,23 @@ void DemoLevel::insertKeyboardCallbacks() {
         else if (kc == EventKeyboard::KeyCode::KEY_W) {
         } else if (kc == EventKeyboard::KeyCode::KEY_S) {
         } else if (kc == EventKeyboard::KeyCode::KEY_ESCAPE) {
-	    Director::getInstance()->end();
-	}
+            Director::getInstance()->end();
+        }
         _camera->setRotation3D(rot);
         /*if (kc == EventKeyboard::KeyCode::KEY_I) {
-	    _agent->move(Vec3{-50, 0, 0});
+            _agent->move(Vec3{-50, 0, 0});
         } else if (kc == EventKeyboard::KeyCode::KEY_K) {
-	    _agent->move(Vec3{50, 0, 0});
+            _agent->move(Vec3{50, 0, 0});
         } else if (kc == EventKeyboard::KeyCode::KEY_J) {
-	    _agent->move(Vec3{0, 0, -50});
+            _agent->move(Vec3{0, 0, -50});
         } else if (kc == EventKeyboard::KeyCode::KEY_L) {
-	    _agent->move(Vec3{0, 0, 50});
+            _agent->move(Vec3{0, 0, 50});
         } // Forward-backward motion
         else if (kc == EventKeyboard::KeyCode::KEY_W) {
         } else if (kc == EventKeyboard::KeyCode::KEY_S) {
         } else if (kc == EventKeyboard::KeyCode::KEY_ESCAPE) {
-	    Director::getInstance()->end();
-	}*/
+            Director::getInstance()->end();
+        }*/
     };
 
     /*keyListener->onKeyReleased = [](EventKeyboard::KeyCode kc, Event* evt) {
@@ -199,22 +174,23 @@ void DemoLevel::insertMouseCallbacks() {
     auto mouseListener = EventListenerMouse::create();
 
     mouseListener->onMouseDown = [=](EventMouse *event) {
-        //auto loc = event->getLocationInView();
+        // auto loc = event->getLocationInView();
         auto loc = event->getLocationInView();
-	auto size = Director::getInstance()->getWinSize();
-	// mouse events generate bottom left origin and unproject
-	// expects top left, do this to compensate
-	loc.y = size.height - loc.y;
+        auto size = Director::getInstance()->getWinSize();
+        // mouse events generate bottom left origin and unproject
+        // expects top left, do this to compensate
+        loc.y = size.height - loc.y;
 
         auto far = Vec3{loc.x, loc.y, 1.0};
         _camera->unproject(size, &far, &far);
-	
+
         Physics3DWorld::HitResult result;
-        this->getPhysics3DWorld()->rayCast(_camera->getPosition3D(), far, &result);
+        this->getPhysics3DWorld()->rayCast(_camera->getPosition3D(), far,
+                                           &result);
 
         auto hitPos = result.hitPosition;
 
-	_agent->move(hitPos);
+        _wizard->move(hitPos);
     };
 
     Director::getInstance()
